@@ -1,0 +1,70 @@
+/* Per-demo theming. Each demo root sets its own accent + surface palette
+   via a data attribute, so the same components restyle to feel like a
+   distinct, real client brand. */
+
+[data-demo] {
+  --demo-bg: #0b0d0c;
+  --demo-surface: #141816;
+  --demo-border: rgba(255, 255, 255, 0.09);
+  --demo-text: #f4f6f4;
+  --demo-muted: #9aa39c;
+  --demo-accent: #4ba36a;
+  --demo-accent-strong: #63c184;
+  --demo-accent-foreground: #06120a;
+
+  background-color: var(--demo-bg);
+  color: var(--demo-text);
+}
+
+/* GreenScape — luxury green */
+[data-demo='greenscape'] {
+  --demo-bg: #0a0f0b;
+  --demo-surface: #121a13;
+  --demo-border: rgba(120, 190, 140, 0.16);
+  --demo-text: #f2f7f2;
+  --demo-muted: #9db3a2;
+  --demo-accent: #4ea56b;
+  --demo-accent-strong: #6bd08c;
+  --demo-accent-foreground: #05130a;
+}
+
+/* Precision Auto — black + electric blue */
+[data-demo='precision-auto'] {
+  --demo-bg: #06080d;
+  --demo-surface: #0e131d;
+  --demo-border: rgba(90, 150, 230, 0.16);
+  --demo-text: #eef3fb;
+  --demo-muted: #93a2bd;
+  --demo-accent: #3b82f6;
+  --demo-accent-strong: #5b9dff;
+  --demo-accent-foreground: #030712;
+}
+
+/* Oak & Ember — warm amber steakhouse */
+[data-demo='oak-ember'] {
+  --demo-bg: #100b08;
+  --demo-surface: #1a120d;
+  --demo-border: rgba(210, 150, 90, 0.18);
+  --demo-text: #f7efe6;
+  --demo-muted: #c1a891;
+  --demo-accent: #d08a3c;
+  --demo-accent-strong: #e6a54f;
+  --demo-accent-foreground: #170d04;
+}
+
+.demo-accent {
+  color: var(--demo-accent-strong);
+}
+.demo-bg-accent {
+  background-color: var(--demo-accent);
+  color: var(--demo-accent-foreground);
+}
+.demo-surface {
+  background-color: var(--demo-surface);
+}
+.demo-border {
+  border-color: var(--demo-border);
+}
+.demo-muted {
+  color: var(--demo-muted);
+}
