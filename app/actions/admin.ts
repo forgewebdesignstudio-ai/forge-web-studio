@@ -3,6 +3,7 @@
 import type { StoredSubmission } from '@/lib/submissions'
 import { getBackendStatus, isDatabaseConfigured } from '@/lib/backend-config'
 import { getSession } from '@/lib/auth'
+import { selectSubmissions, updateSubmissionStatusRow } from '@/lib/supabase-server'
 
 export interface AdminSubmissionsResult {
   /** Submissions to review. Empty until a database is connected. */
@@ -24,10 +25,12 @@ export async function listSubmissions(): Promise<AdminSubmissionsResult> {
 
   let submissions: StoredSubmission[] = []
   if (isDatabaseConfigured()) {
-    // TODO: When a database is connected, query stored submissions here, e.g.
-    //   const rows = await sql`SELECT payload FROM submissions ORDER BY submitted_at DESC`
-    //   submissions = rows.map((r) => r.payload as StoredSubmission)
-    submissions = []
+    try {
+      submissions = await selectSubmissions()
+    } catch (error) {
+      console.log('[v0] Failed to load submissions:', error)
+      submissions = []
+    }
   }
 
   return {
@@ -58,8 +61,12 @@ export async function updateSubmissionStatus(
     }
   }
 
-  // TODO: persist the status change, and on "accepted" provision the client's
-  // portal account + send their invitation email.
-  console.log(`[v0] Submission ${reference} -> ${status}`)
+  try {
+    await updateSubmissionStatusRow(reference, status)
+  } catch (error) {
+    console.log('[v0] Failed to update submission status:', error)
+    return { ok: false, message: 'Could not update the submission. Please try again.' }
+  }
+
   return { ok: true, message: `Submission marked as ${status}.` }
 }
