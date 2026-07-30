@@ -12,6 +12,8 @@ import {
   isEmailConfigured,
   isStorageConfigured,
 } from '@/lib/backend-config'
+import { insertSubmission } from '@/lib/supabase-server'
+import { sendSubmissionEmail } from '@/lib/email'
 
 /**
  * ---------------------------------------------------------------------------
@@ -27,11 +29,10 @@ import {
 async function persistSubmission(submission: StoredSubmission): Promise<boolean> {
   let persisted = false
 
-  // 1) DATABASE — store the submission (Supabase / Neon / Firebase / etc.)
+  // 1) DATABASE — store the submission in Supabase. A failure here is fatal:
+  //    we rethrow so the caller returns an honest error to the client.
   if (isDatabaseConfigured()) {
-    // TODO: insert `submission` into your table, e.g.
-    //   await sql`INSERT INTO submissions (reference, payload, status)
-    //             VALUES (${submission.reference}, ${JSON.stringify(submission)}, 'new')`
+    await insertSubmission(submission)
     persisted = true
   }
 
@@ -39,18 +40,22 @@ async function persistSubmission(submission: StoredSubmission): Promise<boolean>
   //    provider is connected, upload the real File objects (Vercel Blob /
   //    Supabase Storage / S3) from the client and store their URLs here.
   if (isStorageConfigured()) {
-    // TODO: associate uploaded file URLs with this submission.
+    // File metadata is already saved with the submission payload above.
   }
 
-  // 3) EMAIL — notify the studio a new project request arrived.
+  // 3) EMAIL — notify the studio a new project request arrived. This is
+  //    best-effort: an email failure must not lose an already-saved record.
   if (isEmailConfigured()) {
-    // TODO: send an email (Resend / Formspree / SMTP) to
-    //   forgewebdesignstudio@gmail.com with buildSummary(submission).
-    persisted = true
+    try {
+      await sendSubmissionEmail(submission)
+      persisted = true
+    } catch (error) {
+      console.log('[v0] Submission email failed (record still saved):', error)
+    }
   }
 
-  // No backend connected yet: log the complete payload for manual review so
-  // the submission is never silently dropped. This is honest, not faked.
+  // No backend connected: log the complete payload for manual review so the
+  // submission is never silently dropped. This is honest, not faked.
   if (!persisted) {
     console.log(
       '[v0] New project questionnaire submission (backend not yet connected):',
