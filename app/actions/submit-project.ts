@@ -1,5 +1,5 @@
 'use server'
-
+import { createClient } from '@supabase/supabase-js'
 import {
   generateReference,
   firstValue,
@@ -28,12 +28,28 @@ async function persistSubmission(submission: StoredSubmission): Promise<boolean>
   let persisted = false
 
   // 1) DATABASE — store the submission (Supabase / Neon / Firebase / etc.)
-  if (isDatabaseConfigured()) {
-    // TODO: insert `submission` into your table, e.g.
-    //   await sql`INSERT INTO submissions (reference, payload, status)
-    //             VALUES (${submission.reference}, ${JSON.stringify(submission)}, 'new')`
+if (isDatabaseConfigured()) {
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { error } = await supabase
+    .from('submissions')
+    .insert({
+      id: submission.id,
+      reference: submission.reference,
+      submitted_at: submission.submittedAt,
+      status: submission.status,
+      payload: submission,
+    })
+
+  if (error) {
+    console.error('Supabase insert failed:', error)
+  } else {
     persisted = true
   }
+}
 
   // 2) STORAGE — files are captured as metadata client-side. When a storage
   //    provider is connected, upload the real File objects (Vercel Blob /
