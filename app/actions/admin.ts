@@ -3,6 +3,7 @@
 import type { StoredSubmission } from '@/lib/submissions'
 import { getBackendStatus, isDatabaseConfigured } from '@/lib/backend-config'
 import { getSession } from '@/lib/auth'
+import { getSupabaseAdmin } from '@/lib/supabase/server'
 
 export interface AdminSubmissionsResult {
   /** Submissions to review. Empty until a database is connected. */
@@ -24,10 +25,19 @@ export async function listSubmissions(): Promise<AdminSubmissionsResult> {
 
   let submissions: StoredSubmission[] = []
   if (isDatabaseConfigured()) {
-    // TODO: When a database is connected, query stored submissions here, e.g.
-    //   const rows = await sql`SELECT payload FROM submissions ORDER BY submitted_at DESC`
-    //   submissions = rows.map((r) => r.payload as StoredSubmission)
-    submissions = []
+    const supabase = getSupabaseAdmin()
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('submissions')
+        .select('payload')
+        .order('submitted_at', { ascending: false })
+
+      if (error) {
+        console.log('[v0] Supabase submissions query failed:', error.message)
+      } else if (data) {
+        submissions = data.map((row) => row.payload as StoredSubmission)
+      }
+    }
   }
 
   return {
@@ -58,8 +68,22 @@ export async function updateSubmissionStatus(
     }
   }
 
-  // TODO: persist the status change, and on "accepted" provision the client's
-  // portal account + send their invitation email.
-  console.log(`[v0] Submission ${reference} -> ${status}`)
+  const supabase = getSupabaseAdmin()
+  if (!supabase) {
+    return { ok: false, message: 'Database connection is unavailable.' }
+  }
+
+  const { error } = await supabase
+    .from('submissions')
+    .update({ status })
+    .eq('reference', reference)
+
+  if (error) {
+    console.log('[v0] Supabase status update failed:', error.message)
+    return { ok: false, message: 'Failed to update submission status.' }
+  }
+
+  // On "accepted" you can later provision the client's portal account and
+  // send their invitation email here.
   return { ok: true, message: `Submission marked as ${status}.` }
 }

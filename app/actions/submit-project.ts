@@ -12,6 +12,7 @@ import {
   isEmailConfigured,
   isStorageConfigured,
 } from '@/lib/backend-config'
+import { getSupabaseAdmin } from '@/lib/supabase/server'
 
 /**
  * ---------------------------------------------------------------------------
@@ -27,12 +28,28 @@ import {
 async function persistSubmission(submission: StoredSubmission): Promise<boolean> {
   let persisted = false
 
-  // 1) DATABASE — store the submission (Supabase / Neon / Firebase / etc.)
+  // 1) DATABASE — store the submission in the Supabase `submissions` table.
   if (isDatabaseConfigured()) {
-    // TODO: insert `submission` into your table, e.g.
-    //   await sql`INSERT INTO submissions (reference, payload, status)
-    //             VALUES (${submission.reference}, ${JSON.stringify(submission)}, 'new')`
-    persisted = true
+    const supabase = getSupabaseAdmin()
+    if (supabase) {
+      const { error } = await supabase.from('submissions').insert({
+        id: submission.id,
+        reference: submission.reference,
+        status: submission.status,
+        values: submission.values,
+        files: submission.files,
+        payload: submission,
+        submitted_at: submission.submittedAt,
+      })
+
+      if (error) {
+        // Surface the failure so it is retried/handled instead of silently lost.
+        console.log('[v0] Supabase insert failed:', error.message)
+        throw new Error(`Failed to save submission: ${error.message}`)
+      }
+
+      persisted = true
+    }
   }
 
   // 2) STORAGE — files are captured as metadata client-side. When a storage
